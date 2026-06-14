@@ -1,5 +1,9 @@
 # FH6 G-Meter Overlay
 
+## 特記事項
+
+このプロジェクトのコードはAIによるコーディングで作成されています。
+
 Forza Horizon 6 / Forza Motorsport系の **Data Out** UDPパケットを読み取り、GメーターをWindows 11上に常時最前面のオーバーレイとして表示するPythonアプリです。
 
 ## 起動
