@@ -42,7 +42,7 @@ py -3 fh6_gmeter_overlay.py --round
 - 設定: UDP受信、Data Out転送、サイズ、透明度、最大G、スムージングを変更
 - Esc: 終了
 
-設定と位置は `config.json` に保存されます。
+設定と位置は `config.json` に保存されます。このリポジトリには初期設定用の `config.json` も含まれています。
 
 ## Data Out転送
 
