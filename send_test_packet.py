@@ -4,7 +4,7 @@ import struct
 import time
 
 
-G = 9.80665
+STANDARD_GRAVITY_MPS2 = 9.80665
 TARGET = ("127.0.0.1", 1024)
 
 
@@ -18,9 +18,9 @@ def main() -> None:
             packet = bytearray(324)
             struct.pack_into("<i", packet, 0, 1)
             struct.pack_into("<I", packet, 4, int(t * 1000))
-            struct.pack_into("<f", packet, 20, math.sin(t * 1.8) * 1.1 * G)
+            struct.pack_into("<f", packet, 20, math.sin(t * 1.8) * 1.1 * STANDARD_GRAVITY_MPS2)
             struct.pack_into("<f", packet, 24, 0.0)
-            struct.pack_into("<f", packet, 28, math.cos(t * 1.2) * 0.8 * G)
+            struct.pack_into("<f", packet, 28, math.cos(t * 1.2) * 0.8 * STANDARD_GRAVITY_MPS2)
             struct.pack_into("<f", packet, 260, 30.0 + math.sin(t) * 10.0)
             sock.sendto(packet, TARGET)
             time.sleep(1 / 60)

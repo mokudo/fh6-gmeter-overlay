@@ -70,7 +70,7 @@ class TelemetrySample:
 
 
 class ForzaTelemetryParser:
-    G = 9.80665
+    STANDARD_GRAVITY_MPS2 = 9.80665
     ACCELERATION_X_OFFSET = 20
     ACCELERATION_Y_OFFSET = 24
     ACCELERATION_Z_OFFSET = 28
@@ -81,19 +81,22 @@ class ForzaTelemetryParser:
             return None
 
         try:
-            accel_x = struct.unpack_from("<f", packet, self.ACCELERATION_X_OFFSET)[0]
-            accel_y = struct.unpack_from("<f", packet, self.ACCELERATION_Y_OFFSET)[0]
-            accel_z = struct.unpack_from("<f", packet, self.ACCELERATION_Z_OFFSET)[0]
+            accel_x = self.unpack_gravity_acceleration(packet, self.ACCELERATION_X_OFFSET)
+            accel_y = self.unpack_gravity_acceleration(packet, self.ACCELERATION_Y_OFFSET)
+            accel_z = self.unpack_gravity_acceleration(packet, self.ACCELERATION_Z_OFFSET)
         except struct.error:
             return None
 
         return TelemetrySample(
-            lateral_g=accel_x / self.G,
-            longitudinal_g=accel_z / self.G,
-            vertical_g=accel_y / self.G,
+            lateral_g=accel_x,
+            longitudinal_g=accel_z,
+            vertical_g=accel_y,
             timestamp=time.time(),
             packets=packet_count,
         )
+
+    def unpack_gravity_acceleration(self, packet: bytes, offset: int) -> float:
+        return struct.unpack_from("<f", packet, offset)[0] / self.STANDARD_GRAVITY_MPS2
 
 
 class UdpTelemetryReceiver:
