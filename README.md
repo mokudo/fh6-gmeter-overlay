@@ -14,6 +14,14 @@ py -3 fh6_gmeter_overlay.py
 
 または `run_overlay.bat` をダブルクリックしてください。
 
+円描画モードで起動する場合は、以下を実行してください。円描画モードではマーカーの可動領域も円形になります。
+
+```powershell
+py -3 fh6_gmeter_overlay.py --round
+```
+
+または `run_overlay_round.bat` をダブルクリックしてください。
+
 追加ライブラリは不要です。Python標準ライブラリの `tkinter` を使います。
 
 ## ゲーム側設定

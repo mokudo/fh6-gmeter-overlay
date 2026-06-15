@@ -5,13 +5,14 @@ import math
 import queue
 import socket
 import struct
+import sys
 import threading
 import time
 import tkinter as tk
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from tkinter import messagebox, simpledialog
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 APP_NAME = "FH6 G-Meter Overlay"
 CONFIG_PATH = Path(__file__).with_name("config.json")
@@ -37,6 +38,11 @@ class AppConfig:
     accent_color: str = "#48e1ff"
     dot_color: str = "#ff465f"
     packet_mode: str = "forza_dash"
+
+
+@dataclass
+class RuntimeOptions:
+    round_mode: bool = False
 
 
 def load_config() -> AppConfig:
@@ -287,7 +293,8 @@ class SettingsDialog(simpledialog.Dialog):
 
 
 class GmeterOverlay:
-    def __init__(self) -> None:
+    def __init__(self, options: RuntimeOptions) -> None:
+        self.options = options
         self.config = load_config()
         self.samples: queue.Queue[TelemetrySample] = queue.Queue()
         self.receiver = UdpTelemetryReceiver(self.config, self.samples)
@@ -366,18 +373,14 @@ class GmeterOverlay:
         accent = self.config.accent_color
         dot = self.config.dot_color
 
-        self.aa_oval(center - outer, center - outer, center + outer, center + outer, outline=grid_color, width=3)
-        for ratio in (0.5,):
-            radius = outer * ratio
-            self.aa_oval(center - radius, center - radius, center + radius, center + radius, outline=dim_color, width=3)
+        self.draw_region_guides(center, outer, grid_color, dim_color)
 
         self.aa_line(center - outer, center, center + outer, center, fill=dim_color, width=3)
         self.aa_line(center, center - outer, center, center + outer, fill=dim_color, width=3)
         self.canvas.create_text(center, center - outer - 14, text=f"{self.config.max_g:.1f}G", fill=grid_color, font=("Segoe UI", 9, "bold"))
 
         max_g = max(self.config.max_g, 0.1)
-        clamped_x = max(-max_g, min(max_g, self.display_lateral))
-        clamped_y = max(-max_g, min(max_g, self.display_longitudinal))
+        clamped_x, clamped_y = self.clamp_marker(self.display_lateral, self.display_longitudinal, max_g)
         dot_x = center - (clamped_x / max_g) * outer
         dot_y = center + (clamped_y / max_g) * outer
         magnitude = math.hypot(self.display_lateral, self.display_longitudinal)
@@ -393,6 +396,29 @@ class GmeterOverlay:
         if self.config.locked:
             self.canvas.create_text(size - 18, 17, text="LOCK", fill=accent, font=("Segoe UI", 8, "bold"), anchor="e")
 
+    def draw_region_guides(self, center: float, outer: float, grid_color: str, dim_color: str) -> None:
+        if self.options.round_mode:
+            self.aa_oval(center - outer, center - outer, center + outer, center + outer, outline=grid_color, width=3)
+            inner = outer * 0.5
+            self.aa_oval(center - inner, center - inner, center + inner, center + inner, outline=dim_color, width=3)
+            return
+
+        self.aa_rectangle(center - outer, center - outer, center + outer, center + outer, outline=grid_color, width=3)
+        inner = outer * 0.5
+        self.aa_rectangle(center - inner, center - inner, center + inner, center + inner, outline=dim_color, width=3)
+
+    def clamp_marker(self, lateral_g: float, longitudinal_g: float, max_g: float) -> Tuple[float, float]:
+        clamped_x = max(-max_g, min(max_g, lateral_g))
+        clamped_y = max(-max_g, min(max_g, longitudinal_g))
+        if not self.options.round_mode:
+            return clamped_x, clamped_y
+
+        magnitude = math.hypot(lateral_g, longitudinal_g)
+        if magnitude <= max_g:
+            return lateral_g, longitudinal_g
+        scale = max_g / magnitude
+        return lateral_g * scale, longitudinal_g * scale
+
     def aa_line(self, *coords: float, fill: str, width: float) -> None:
         self.canvas.create_line(*coords, fill=self.aa_color(fill), width=width + 1.0)
         self.canvas.create_line(*coords, fill=fill, width=width)
@@ -400,6 +426,10 @@ class GmeterOverlay:
     def aa_oval(self, x1: float, y1: float, x2: float, y2: float, outline: str, width: float) -> None:
         self.canvas.create_oval(x1, y1, x2, y2, outline=self.aa_color(outline), width=width + 1.0)
         self.canvas.create_oval(x1, y1, x2, y2, outline=outline, width=width)
+
+    def aa_rectangle(self, x1: float, y1: float, x2: float, y2: float, outline: str, width: float) -> None:
+        self.canvas.create_rectangle(x1, y1, x2, y2, outline=self.aa_color(outline), width=width + 1.0)
+        self.canvas.create_rectangle(x1, y1, x2, y2, outline=outline, width=width)
 
     def aa_filled_oval(self, x1: float, y1: float, x2: float, y2: float, fill: str) -> None:
         fringe = self.aa_color(fill)
@@ -492,5 +522,9 @@ class GmeterOverlay:
         self.root.destroy()
 
 
+def parse_runtime_options(argv: List[str]) -> RuntimeOptions:
+    return RuntimeOptions(round_mode="--round" in argv)
+
+
 if __name__ == "__main__":
-    GmeterOverlay().run()
+    GmeterOverlay(parse_runtime_options(sys.argv[1:])).run()
